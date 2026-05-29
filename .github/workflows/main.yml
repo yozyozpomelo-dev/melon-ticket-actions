@@ -11,31 +11,27 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Check ticket and send email
+        env:
+          MELON_COOKIE: ${{ secrets.MELON_COOKIE }}
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_PASS: ${{ secrets.GMAIL_PASS }}
+          NOTIFY_EMAIL: ${{ secrets.NOTIFY_EMAIL }}
         run: |
-          RESULT=$(curl -s \
-            "https://ticket.melon.com/tktapi/product/block/summary.json?v=1" \
-            --data "prodId=213100&scheduleNo=100001&perfDate=20260619&pocCode=SC0002"
-            -H "Content-Type: application/x-www-form-urlencoded" \
-            -H "Cookie: ${{ secrets.MELON_COOKIE }}" \
-            -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" \
-            -H "Referer: https://ticket.melon.com/reservation/popup/stepBlock.htm" \
-            -H "Origin: https://ticket.melon.com")
-          
+          RESULT=$(curl -s "https://ticket.melon.com/tktapi/product/block/summary.json?v=1" --data "prodId=213100&scheduleNo=100001&perfDate=20260619&pocCode=SC0002" -H "Content-Type: application/x-www-form-urlencoded" -H "Cookie: ${MELON_COOKIE}" -H "User-Agent: Mozilla/5.0" -H "Referer: https://ticket.melon.com/reservation/popup/stepBlock.htm" -H "Origin: https://ticket.melon.com")
           echo "Result: $RESULT"
-          
           if echo "$RESULT" | grep -q '"remainCnt":[^0]'; then
-            python3 - <<EOF
-          import smtplib
+            python3 -c "
+          import smtplib, os
           from email.mime.text import MIMEText
-          msg = MIMEText('Melon Ticket 有余票了！快去抢！\nhttps://ticket.melon.com/performance/index.htm?prodId=213100')
-          msg['Subject'] = '🎫 TREASURE票有了！快去抢！'
-          msg['From'] = '${{ secrets.GMAIL_USER }}'
-          msg['To'] = '${{ secrets.NOTIFY_EMAIL }}'
+          msg = MIMEText('TREASURE票有余票了！快去抢！\nhttps://ticket.melon.com/performance/index.htm?prodId=213100')
+          msg['Subject'] = 'TREASURE票有了！快去抢！'
+          msg['From'] = os.environ['GMAIL_USER']
+          msg['To'] = os.environ['NOTIFY_EMAIL']
           s = smtplib.SMTP('smtp.gmail.com', 587)
           s.starttls()
-          s.login('${{ secrets.GMAIL_USER }}', '${{ secrets.GMAIL_PASS }}')
+          s.login(os.environ['GMAIL_USER'], os.environ['GMAIL_PASS'])
           s.send_message(msg)
           s.quit()
           print('邮件已发送！')
-          EOF
+          "
           fi
