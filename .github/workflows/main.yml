@@ -12,15 +12,22 @@ jobs:
     steps:
       - name: Check ticket and send email
         env:
-          MELON_COOKIE: ${{ secrets.MELON_COOKIE }}
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
           GMAIL_PASS: ${{ secrets.GMAIL_PASS }}
           NOTIFY_EMAIL: ${{ secrets.NOTIFY_EMAIL }}
         run: |
-          RESULT=$(curl -s "https://ticket.melon.com/tktapi/product/block/summary.json?v=1" --data "prodId=213100&scheduleNo=100001&perfDate=20260619&pocCode=SC0002" -H "Content-Type: application/x-www-form-urlencoded" -H "Cookie: ${MELON_COOKIE}" -H "User-Agent: Mozilla/5.0" -H "Referer: https://ticket.melon.com/reservation/popup/stepBlock.htm" -H "Origin: https://ticket.melon.com")
+          RESULT=$(curl -s 'https://ticket.melon.com/tktapi/product/summary.json?v=1&callback=getBlockGradeSeatCountCallBack' \
+            -H 'Content-Type: application/x-www-form-urlencoded; charset=UTF-8' \
+            -H 'Origin: https://ticket.melon.com' \
+            -H 'Referer: https://ticket.melon.com/reservation/popup/stepBlock.htm' \
+            -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' \
+            -H 'X-Requested-With: XMLHttpRequest' \
+            -b '${{ secrets.MELON_COOKIE }}' \
+            --data-raw 'prodId=213100&pocCode=SC0002&scheduleNo=100001&perfDate=20260619&corpCodeNo=')
           echo "Result: $RESULT"
-          if echo "$RESULT" | grep -q '"remainCnt":[^0]'; then
-            python3 -c "
+          if echo "$RESULT" | grep -qv '"remainCnt":0'; then
+            if echo "$RESULT" | grep -q 'remainCnt'; then
+              python3 -c "
           import smtplib, os
           from email.mime.text import MIMEText
           msg = MIMEText('TREASURE票有余票了！快去抢！\nhttps://ticket.melon.com/performance/index.htm?prodId=213100')
@@ -34,4 +41,5 @@ jobs:
           s.quit()
           print('邮件已发送！')
           "
+            fi
           fi
