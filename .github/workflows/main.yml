@@ -12,15 +12,14 @@ jobs:
     steps:
       - name: Check ticket and send email
         run: |
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            "https://ticket.melon.com/tktapi/product/block/summary.json?v=1" \
-            --data "prodId=213100" \
-            -H "User-Agent: Mozilla/5.0")
-          
           RESULT=$(curl -s \
             "https://ticket.melon.com/tktapi/product/block/summary.json?v=1" \
-            --data "prodId=213100" \
-            -H "User-Agent: Mozilla/5.0")
+            --data "prodId=213100&scheduleNo=1&perfDate=20260619&pocCode=MELT" \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -H "Cookie: ${{ secrets.MELON_COOKIE }}" \
+            -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" \
+            -H "Referer: https://ticket.melon.com/reservation/popup/stepBlock.htm" \
+            -H "Origin: https://ticket.melon.com")
           
           echo "Result: $RESULT"
           
@@ -29,7 +28,7 @@ jobs:
           import smtplib
           from email.mime.text import MIMEText
           msg = MIMEText('Melon Ticket 有余票了！快去抢！\nhttps://ticket.melon.com/performance/index.htm?prodId=213100')
-          msg['Subject'] = '🎫 Melon有票了！快去抢！'
+          msg['Subject'] = '🎫 TREASURE票有了！快去抢！'
           msg['From'] = '${{ secrets.GMAIL_USER }}'
           msg['To'] = '${{ secrets.NOTIFY_EMAIL }}'
           s = smtplib.SMTP('smtp.gmail.com', 587)
