@@ -4,6 +4,9 @@ on:
   schedule:
     - cron: '*/5 * * * *'
   workflow_dispatch:
+  push:
+    branches:
+      - master
 
 jobs:
   check:
@@ -22,12 +25,15 @@ jobs:
             -H 'Content-Type: application/x-www-form-urlencoded; charset=UTF-8' \
             -H 'Origin: https://ticket.melon.com' \
             -H 'Referer: https://ticket.melon.com/reservation/popup/stepBlock.htm' \
-            -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36' \
+            -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' \
             -H 'X-Requested-With: XMLHttpRequest' \
             -b /tmp/cookie.txt \
             --data-raw 'prodId=213100&pocCode=SC0002&scheduleNo=100001&perfDate=20260619&corpCodeNo=')
           echo "Result: $RESULT"
-          if echo "$RESULT" | grep -q 'remainCnt'; then
+          if echo "$RESULT" | grep -q '"realSeatCntlk":[^0]'; then
+            curl -s "https://sctapi.ftqq.com/SCT356777ThVapkth4TcyNyeYp7XXMhu67.send" \
+              --data-urlencode "title=🎫 TREASURE有票了！快去抢！" \
+              --data-urlencode "desp=韩版有余票出现！立即打开购票页面！https://ticket.melon.com/performance/index.htm?prodId=213100"
             python3 -c "
           import smtplib, os
           from email.mime.text import MIMEText
@@ -40,6 +46,5 @@ jobs:
           s.login(os.environ['GMAIL_USER'], os.environ['GMAIL_PASS'])
           s.send_message(msg)
           s.quit()
-          print('邮件已发送！')
           "
           fi
