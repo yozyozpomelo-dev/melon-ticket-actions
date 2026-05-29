@@ -1,22 +1,42 @@
-name: workflow
-on: push
+name: Melon Ticket Monitor
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
 jobs:
-  job:
+  check:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v1
-      - name: Prepare
-        run: npm ci
-      - name: Lint
-        uses: mooyoul/tslint-actions@master
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          pattern: '*.ts'
-      - name: Build
-        run: npm run build
-      - name: Publish
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-        run: npx semantic-release
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      - name: Check ticket and send email
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            "https://ticket.melon.com/tktapi/product/block/summary.json?v=1" \
+            --data "prodId=213100" \
+            -H "User-Agent: Mozilla/5.0")
+          
+          RESULT=$(curl -s \
+            "https://ticket.melon.com/tktapi/product/block/summary.json?v=1" \
+            --data "prodId=213100" \
+            -H "User-Agent: Mozilla/5.0")
+          
+          echo "Result: $RESULT"
+          
+          if echo "$RESULT" | grep -q '"remainCnt":[^0]'; then
+            python3 - <<EOF
+          import smtplib
+          from email.mime.text import MIMEText
+          msg = MIMEText('Melon Ticket 有余票了！快去抢！\nhttps://ticket.melon.com/performance/index.htm?prodId=213100')
+          msg['Subject'] = '🎫 Melon有票了！快去抢！'
+          msg['From'] = '${{ secrets.GMAIL_USER }}'
+          msg['To'] = '${{ secrets.NOTIFY_EMAIL }}'
+          s = smtplib.SMTP('smtp.gmail.com', 587)
+          s.starttls()
+          s.login('${{ secrets.GMAIL_USER }}', '${{ secrets.GMAIL_PASS }}')
+          s.send_message(msg)
+          s.quit()
+          print('邮件已发送！')
+          EOF
+          fi
