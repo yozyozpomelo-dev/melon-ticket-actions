@@ -14,7 +14,7 @@ jobs:
         run: |
           RESULT=$(curl -s \
             "https://ticket.melon.com/tktapi/product/block/summary.json?v=1" \
-            --data "prodId=213100&scheduleNo=1&perfDate=20260619&pocCode=MELT" \
+            --data "prodId=213100&scheduleNo=100001&perfDate=20260619&pocCode=SC0002"
             -H "Content-Type: application/x-www-form-urlencoded" \
             -H "Cookie: ${{ secrets.MELON_COOKIE }}" \
             -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" \
